@@ -54,6 +54,7 @@
   .msg.them { align-self: flex-start; background: var(--bubble-them); border: 1px solid var(--line); border-bottom-left-radius: 4px; }
   .msg.me { align-self: flex-end; background: var(--bubble-me); color: var(--bubble-me-ink); border-bottom-right-radius: 4px; }
   .msg.feedback { align-self: stretch; max-width: 100%; background: var(--card); border: 2px solid var(--brand); }
+  .msg.menu { align-self: center; width: min(100%, 420px); max-width: 100%; background: var(--card); border: 1px dashed var(--brand); }
   .msg.error { align-self: center; color: var(--accent); background: transparent; font-size: .9rem; }
   .who { font-size: .75rem; font-weight: 600; opacity: .7; display: block; margin-bottom: 2px; }
   form { display: flex; gap: 8px; margin-top: 8px; }
@@ -105,7 +106,16 @@
 const SCENARIOS = {
   soda:     { emoji: "🍛", title: "En la soda", who: "Doña Marta",
               task: "Pida comida y un fresco, y pague la cuenta.",
-              opening: "¡Buenas! Pase adelante, siéntese donde guste. ¿Qué le sirvo hoy?" },
+              opening: "¡Buenas! Pase adelante, siéntese donde guste. ¿Qué le sirvo hoy?",
+              menu: [
+                "🍛 Casado (pollo, carne en salsa, pescado o vegetariano) – ₡3500",
+                "🍳 Gallo pinto con huevo – ₡2500",
+                "🍲 Olla de carne – ₡3800",
+                "🍗 Arroz con pollo – ₡3200",
+                "🥟 Empanada de queso o de frijol – ₡900",
+                "🥤 Fresco natural (cas, mora, piña o tamarindo) – ₡1000",
+                "☕ Café chorreado – ₡800",
+              ] },
 };
 
 const $ = (id) => document.getElementById(id);
@@ -146,6 +156,7 @@ function start(key) {
   $("goal").textContent = "🎯 Su meta: " + s.task;
   $("log").innerHTML = "";
   addMsg("them", s.opening, s.who);
+  if (s.menu) addMsg("menu", s.menu.join("\n"), "📋 Menú del día");
   $("picker").style.display = "none";
   $("chat").style.display = "block";
   setBusy(false);
