@@ -120,6 +120,11 @@ ${SHARED_RULES}`;
       return json({ error: "The chatbot isn't set up yet (API key missing)." }, 500);
     }
     if (error instanceof OpenAI.RateLimitError) {
+      // OpenAI uses 429 both for "too many requests" and for "no credit left on the account".
+      console.error(`OpenAI 429 (${error.code ?? "rate_limit"}):`, error.message);
+      if (error.code === "insufficient_quota") {
+        return json({ error: "El chat no tiene crédito de OpenAI en este momento. (OpenAI: insufficient_quota)" }, 503);
+      }
       return json({ error: "Muchas personas están usando el chat. Intente de nuevo en un momento." }, 429);
     }
     if (error instanceof OpenAI.APIError) {
