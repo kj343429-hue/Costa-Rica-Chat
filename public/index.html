@@ -60,6 +60,22 @@
   form { display: flex; gap: 8px; margin-top: 8px; }
   textarea { flex: 1; resize: none; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); color: var(--ink); min-height: 46px; }
   .typing { color: var(--muted); font-style: italic; }
+  .notice { margin: 0 0 16px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); border-left: 4px solid var(--brand); background: var(--card); font-size: .92rem; }
+  .notice strong { display: block; margin-bottom: 4px; }
+  .notice ul { margin: 0; padding-left: 20px; }
+  .tools { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 8px; }
+  #accents { display: flex; flex-wrap: wrap; gap: 6px; }
+  .key { min-width: 36px; padding: 4px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--ink); cursor: pointer; }
+  .key:hover, .key:focus-visible { border-color: var(--brand); outline: none; }
+  .help-toggle { margin-left: auto; }
+  .count { color: var(--muted); font-size: .85rem; }
+  #help { display: none; flex-wrap: wrap; gap: 6px; margin-top: 8px; padding: 10px; border: 1px dashed var(--line); border-radius: 12px; background: var(--card); }
+  #help.open { display: flex; }
+  #help p { width: 100%; margin: 0 0 2px; color: var(--muted); font-size: .85rem; }
+  .phrase { padding: 6px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); cursor: pointer; }
+  .phrase:hover, .phrase:focus-visible { border-color: var(--brand); outline: none; }
+  .retry { align-self: center; }
+  .divider { align-self: stretch; text-align: center; color: var(--muted); font-size: .85rem; border-top: 1px solid var(--line); padding-top: 6px; }
   footer { margin-top: 28px; color: var(--muted); font-size: .85rem; }
 </style>
 </head>
@@ -71,6 +87,14 @@
   </header>
 
   <section id="picker">
+    <div class="notice" role="note" lang="en">
+      <strong>ℹ️ About this practice tool</strong>
+      <ul>
+        <li>This practice tool uses AI from OpenAI. What you type is sent to OpenAI to create the replies.</li>
+        <li>Please don't include your name or any personal details.</li>
+        <li>The AI can make mistakes. If something seems wrong, check with your instructor.</li>
+      </ul>
+    </div>
     <div class="level">
       <label for="level">Su nivel:</label>
       <select id="level">
@@ -97,6 +121,14 @@
       <textarea id="input" rows="1" maxlength="800" placeholder="Escriba en español…" aria-label="Su mensaje"></textarea>
       <button class="btn primary" id="send" type="submit">Enviar</button>
     </form>
+    <div class="tools">
+      <span id="accents" role="group" aria-label="Letras con acento"></span>
+      <span id="count" class="count" aria-live="polite"></span>
+      <button class="btn help-toggle" id="help-toggle" type="button" aria-expanded="false" aria-controls="help">🙋 Ayuda para preguntar</button>
+    </div>
+    <div id="help">
+      <p>Toque una frase para usarla:</p>
+    </div>
   </section>
 
   <footer>Los personajes son inteligencia artificial y pueden cometer errores. No comparta información personal.</footer>
@@ -118,10 +150,69 @@ const SCENARIOS = {
               ] },
 };
 
+const ACCENTS = ["á", "é", "í", "ó", "ú", "ñ", "ü", "¿", "¡"];
+
+// "Help me ask" phrases. A "___" marks where the student fills in a word.
+const HELP_PHRASES = [
+  "¿Me repite, por favor?",
+  "Más despacio, por favor.",
+  "No entiendo.",
+  "¿Qué significa ___?",
+  "¿Qué es ___?",
+  "¿Cómo se dice ___ en español?",
+  "¿Cuánto es?",
+  "¿Me trae la cuenta, por favor?",
+];
+
 const $ = (id) => document.getElementById(id);
 let current = null;   // scenario key
 let history = [];     // [{role, content}] sent to the server (starts with the student)
 let busy = false;
+let finished = false; // true after feedback, until the student tries again
+let attempt = 1;
+const MAX_STUDENT_MESSAGES = 20; // per conversation; keep in sync with netlify/functions/chat.mjs
+
+// Put text into the message box at the cursor. If it has "___", select that spot for the student to type over.
+function insertText(text) {
+  const box = $("input");
+  const startPos = box.selectionStart ?? box.value.length;
+  const endPos = box.selectionEnd ?? box.value.length;
+  box.value = box.value.slice(0, startPos) + text + box.value.slice(endPos);
+  const blank = text.indexOf("___");
+  box.focus();
+  if (blank >= 0) box.setSelectionRange(startPos + blank, startPos + blank + 3);
+  else box.setSelectionRange(startPos + text.length, startPos + text.length);
+}
+
+for (const ch of ACCENTS) {
+  const k = document.createElement("button");
+  k.type = "button";
+  k.className = "key";
+  k.textContent = ch;
+  k.setAttribute("aria-label", "Escribir " + ch);
+  k.addEventListener("mousedown", (e) => e.preventDefault()); // keep the cursor in the message box
+  k.addEventListener("click", () => insertText(ch));
+  $("accents").appendChild(k);
+}
+
+for (const p of HELP_PHRASES) {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.className = "phrase";
+  b.textContent = p;
+  b.addEventListener("click", () => {
+    insertText(p);
+    toggleHelp(false);
+  });
+  $("help").appendChild(b);
+}
+
+function toggleHelp(open) {
+  const isOpen = open ?? !$("help").classList.contains("open");
+  $("help").classList.toggle("open", isOpen);
+  $("help-toggle").setAttribute("aria-expanded", String(isOpen));
+}
+$("help-toggle").addEventListener("click", () => toggleHelp());
 
 // Build scenario cards
 for (const [key, s] of Object.entries(SCENARIOS)) {
@@ -150,27 +241,69 @@ function addMsg(kind, text, who) {
 
 function start(key) {
   current = key;
-  history = [];
+  attempt = 1;
   const s = SCENARIOS[key];
   $("chat-title").textContent = `${s.emoji} ${s.title}`;
   $("goal").textContent = "🎯 Su meta: " + s.task;
   $("log").innerHTML = "";
-  addMsg("them", s.opening, s.who);
-  if (s.menu) addMsg("menu", s.menu.join("\n"), "📋 Menú del día");
   $("picker").style.display = "none";
   $("chat").style.display = "block";
+  beginAttempt();
+}
+
+// Start (or restart) the conversation. Earlier attempts and their feedback stay visible above.
+function beginAttempt() {
+  const s = SCENARIOS[current];
+  history = [];
+  finished = false;
+  if (attempt > 1) {
+    const d = document.createElement("div");
+    d.className = "divider";
+    d.textContent = `Intento ${attempt}`;
+    $("log").appendChild(d);
+  }
+  addMsg("them", s.opening, s.who);
+  if (s.menu) addMsg("menu", s.menu.join("\n"), "📋 Menú del día");
+  toggleHelp(false);
   setBusy(false);
   $("input").focus();
 }
 
+function addRetryButton() {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.className = "btn primary retry";
+  b.textContent = "🔁 Intentar de nuevo";
+  b.addEventListener("click", () => {
+    b.remove();
+    attempt += 1;
+    beginAttempt();
+  });
+  $("log").appendChild(b);
+  $("log").scrollTop = $("log").scrollHeight;
+}
+
+function studentMessages() {
+  return history.filter((m) => m.role === "user").length;
+}
+
 function setBusy(v) {
   busy = v;
-  $("send").disabled = v;
-  $("finish").disabled = v || history.length === 0;
+  const atLimit = studentMessages() >= MAX_STUDENT_MESSAGES;
+  $("send").disabled = v || finished || atLimit;
+  $("input").disabled = finished || atLimit;
+  $("input").placeholder = finished
+    ? "Toque «Intentar de nuevo» para practicar otra vez."
+    : atLimit
+      ? `Llegó al límite de ${MAX_STUDENT_MESSAGES} mensajes. Toque «Terminar y ver comentarios».`
+      : "Escriba en español…";
+  $("finish").disabled = v || finished || history.length === 0;
+  $("count").textContent = finished ? "" : `Mensajes: ${studentMessages()} de ${MAX_STUDENT_MESSAGES}`;
 }
 
 async function send(text, { isFinish = false } = {}) {
-  if (busy || !text.trim()) return;
+  if (busy || finished || !text.trim()) return;
+  if (!isFinish && studentMessages() >= MAX_STUDENT_MESSAGES) return;
   const s = SCENARIOS[current];
   if (!isFinish) addMsg("me", text, "Usted");
   history.push({ role: "user", content: text });
@@ -187,10 +320,17 @@ async function send(text, { isFinish = false } = {}) {
     typing.remove();
     if (!res.ok || !data.reply) {
       history.pop(); // let the student try again
-      addMsg("error", data.error || "Algo salió mal. Intente de nuevo.");
+      const fallback = res.status === 429
+        ? "Muchas personas están usando el chat. Intente de nuevo en un momento."
+        : "Algo salió mal. Intente de nuevo.";
+      addMsg("error", data.error || fallback);
     } else {
       history.push({ role: "assistant", content: data.reply });
       addMsg(isFinish ? "feedback" : "them", data.reply, isFinish ? "📝 Comentarios" : s.who);
+      if (isFinish) {
+        finished = true;
+        addRetryButton();
+      }
     }
   } catch {
     typing.remove();
