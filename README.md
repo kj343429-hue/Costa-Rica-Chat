@@ -1,7 +1,7 @@
 # Costa Rica Chat 🇨🇷
 
 A practice chatbot for Spanish students. Students role-play everyday situations
-in Costa Rica with characters who speak Costa Rican Spanish (usted, mae, pura vida, diay…).
+in Costa Rica with characters who speak Costa Rican Spanish (usted, pura vida, diay, con gusto…).
 
 ## Scenarios
 - 🍛 Ordering food at a soda (live now)
@@ -30,3 +30,9 @@ Set a monthly spending limit in the OpenAI dashboard so costs stay predictable.
 ## Planned next
 - Firebase Authentication for student/teacher login
 - Firestore database to save conversations for teacher review
+
+## Safety
+- The OpenAI key lives only in Netlify's environment variables, never in this repository.
+- The app saves no conversations; the start screen tells students what is sent to OpenAI.
+- Limits: 20 student messages per conversation, 800 characters per message, 60 requests per minute per connection.
+- Doña Marta stays in the soda scene, uses *usted*, and never asks for personal details.
