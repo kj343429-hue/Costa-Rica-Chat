@@ -77,7 +77,7 @@ export default async (req) => {
     return json({ error: "Invalid request" }, 400);
   }
   if (history.length > MAX_TURNS) {
-    return json({ error: "Esta conversación ya es muy larga. Empezá una nueva escena." }, 400);
+    return json({ error: "Esta conversación ya es muy larga. Empiece una nueva escena." }, 400);
   }
 
   // Only accept plain text turns that alternate correctly, starting and ending with the student.
@@ -118,14 +118,14 @@ ${SHARED_RULES}`;
       return json({ error: "The chatbot isn't set up yet (API key missing)." }, 500);
     }
     if (error instanceof OpenAI.RateLimitError) {
-      return json({ error: "Muchas personas están usando el chat. Intentá de nuevo en un momento." }, 429);
+      return json({ error: "Muchas personas están usando el chat. Intente de nuevo en un momento." }, 429);
     }
     if (error instanceof OpenAI.APIError) {
       console.error(`OpenAI API error ${error.status}:`, error.message);
-      return json({ error: "Algo salió mal. Intentá de nuevo." }, 502);
+      return json({ error: "Algo salió mal. Intente de nuevo." }, 502);
     }
     console.error(error);
-    return json({ error: "Algo salió mal. Intentá de nuevo." }, 500);
+    return json({ error: "Algo salió mal. Intente de nuevo." }, 500);
   }
 };
 
