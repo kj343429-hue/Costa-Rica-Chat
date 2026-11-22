@@ -66,12 +66,12 @@
 <div class="wrap">
   <header>
     <h1><span class="flag" aria-hidden="true"></span>Costa Rica Chat</h1>
-    <p>Practicá español tico en situaciones de la vida real. ¡Pura vida!</p>
+    <p>Practique español tico en situaciones de la vida real. ¡Pura vida!</p>
   </header>
 
   <section id="picker">
     <div class="level">
-      <label for="level">Tu nivel:</label>
+      <label for="level">Su nivel:</label>
       <select id="level">
         <option value="A1">A1 – Principiante</option>
         <option value="A2" selected>A2 – Básico</option>
@@ -93,18 +93,18 @@
     <div class="goal" id="goal"></div>
     <div id="log"></div>
     <form id="form">
-      <textarea id="input" rows="1" maxlength="800" placeholder="Escribí en español…" aria-label="Tu mensaje"></textarea>
+      <textarea id="input" rows="1" maxlength="800" placeholder="Escriba en español…" aria-label="Su mensaje"></textarea>
       <button class="btn primary" id="send" type="submit">Enviar</button>
     </form>
   </section>
 
-  <footer>Los personajes son inteligencia artificial y pueden cometer errores. No compartás información personal.</footer>
+  <footer>Los personajes son inteligencia artificial y pueden cometer errores. No comparta información personal.</footer>
 </div>
 
 <script>
 const SCENARIOS = {
   soda:     { emoji: "🍛", title: "En la soda", who: "Doña Marta",
-              task: "Pedí comida y un fresco, y pagá la cuenta.",
+              task: "Pida comida y un fresco, y pague la cuenta.",
               opening: "¡Buenas! Pase adelante, siéntese donde guste. ¿Qué le sirvo hoy?" },
 };
 
@@ -143,7 +143,7 @@ function start(key) {
   history = [];
   const s = SCENARIOS[key];
   $("chat-title").textContent = `${s.emoji} ${s.title}`;
-  $("goal").textContent = "🎯 Tu meta: " + s.task;
+  $("goal").textContent = "🎯 Su meta: " + s.task;
   $("log").innerHTML = "";
   addMsg("them", s.opening, s.who);
   $("picker").style.display = "none";
@@ -161,10 +161,10 @@ function setBusy(v) {
 async function send(text, { isFinish = false } = {}) {
   if (busy || !text.trim()) return;
   const s = SCENARIOS[current];
-  if (!isFinish) addMsg("me", text, "Vos");
+  if (!isFinish) addMsg("me", text, "Usted");
   history.push({ role: "user", content: text });
   setBusy(true);
-  const typing = addMsg("them typing", isFinish ? "Preparando tus comentarios…" : `${s.who} está escribiendo…`);
+  const typing = addMsg("them typing", isFinish ? "Preparando sus comentarios…" : `${s.who} está escribiendo…`);
 
   try {
     const res = await fetch("/api/chat", {
@@ -176,7 +176,7 @@ async function send(text, { isFinish = false } = {}) {
     typing.remove();
     if (!res.ok || !data.reply) {
       history.pop(); // let the student try again
-      addMsg("error", data.error || "Algo salió mal. Intentá de nuevo.");
+      addMsg("error", data.error || "Algo salió mal. Intente de nuevo.");
     } else {
       history.push({ role: "assistant", content: data.reply });
       addMsg(isFinish ? "feedback" : "them", data.reply, isFinish ? "📝 Comentarios" : s.who);
@@ -184,7 +184,7 @@ async function send(text, { isFinish = false } = {}) {
   } catch {
     typing.remove();
     history.pop();
-    addMsg("error", "No hay conexión. Intentá de nuevo.");
+    addMsg("error", "No hay conexión. Intente de nuevo.");
   }
   setBusy(false);
 }
