@@ -10,7 +10,8 @@ const client = new OpenAI(); // reads OPENAI_API_KEY from the environment
 // Change the model in Netlify (environment variable OPENAI_MODEL) without editing code.
 const MODEL = process.env.OPENAI_MODEL || "gpt-6.2-sol";
 
-const MAX_TURNS = 40; // messages per conversation
+const MAX_STUDENT_MESSAGES = 20; // per conversation (plus one more to ask for feedback)
+const MAX_HISTORY = (MAX_STUDENT_MESSAGES + 1) * 2 - 1; // student + doña Marta messages
 const MAX_CHARS = 800; // characters per student message
 
 const SHARED_RULES = `
@@ -87,7 +88,7 @@ export default async (req) => {
   if (!scenario || !history || history.length === 0) {
     return json({ error: "Invalid request" }, 400);
   }
-  if (history.length > MAX_TURNS) {
+  if (history.length > MAX_HISTORY) {
     return json({ error: "Esta conversación ya es muy larga. Empiece una nueva escena." }, 400);
   }
 
@@ -145,4 +146,14 @@ ${SHARED_RULES}`;
   }
 };
 
-export const config = { path: "/api/chat" };
+export const config = {
+  path: "/api/chat",
+  // Per-visitor limit, enforced by Netlify before this code runs (blocked requests get HTTP 429).
+  // Counted per IP address. A whole class on school Wi-Fi may share one IP, so the limit is generous:
+  // it stops scripts that hammer the chat, not normal students.
+  rateLimit: {
+    windowLimit: 60, // requests allowed...
+    windowSize: 60, // ...per 60 seconds (Netlify's maximum window is 180)
+    aggregateBy: ["ip", "domain"],
+  },
+};
